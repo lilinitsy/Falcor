@@ -158,6 +158,8 @@ void MinimalPathTracerFoveated::execute(RenderContext* pRenderContext, const Ren
     mTracer.pProgram->addDefine("USE_EMISSIVE_LIGHTS", mpScene->useEmissiveLights() ? "1" : "0");
     mTracer.pProgram->addDefine("USE_ENV_LIGHT", mpScene->useEnvLight() ? "1" : "0");
     mTracer.pProgram->addDefine("USE_ENV_BACKGROUND", mpScene->useEnvBackground() ? "1" : "0");
+    mTracer.pProgram->addDefine("USE_GUENTER_FOVEATION", m_use_guenter_foveation ? "1" : "0");
+    mTracer.pProgram->addDefine("USE_BLUENOISE_FOVEATION", m_use_bluenoise_foveation ? "1" : "0");
 
     // For optional I/O resources, set 'is_valid_<name>' defines to inform the program of which ones it can access.
     // TODO: This should be moved to a more general mechanism using Slang.
@@ -210,6 +212,12 @@ void MinimalPathTracerFoveated::renderUI(Gui::Widgets& widget)
 
     dirty |= widget.checkbox("Use importance sampling", mUseImportanceSampling);
     widget.tooltip("Use importance sampling for materials", true);
+
+    dirty |= widget.checkbox("use guenter foveation", m_use_guenter_foveation);
+    widget.tooltip("Whether to use guenter style shading rate ray density reductions.", true);
+
+    dirty |= widget.checkbox("use blue noise foveation", m_use_bluenoise_foveation);
+    widget.tooltip("Whether to use blue noise style shading rate ray density reductions.", true);
 
     // If rendering options that modify the output have changed, set flag to indicate that.
     // In execute() we will pass the flag to other passes for reset of temporal data etc.

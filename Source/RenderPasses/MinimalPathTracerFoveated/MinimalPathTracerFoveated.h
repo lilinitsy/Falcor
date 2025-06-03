@@ -82,6 +82,12 @@ private:
     /// Use importance sampling for materials.
     bool mUseImportanceSampling = true;
 
+    /// Use Guenter foveation
+    bool m_use_guenter_foveation = false;
+    /// Use blue noise foveation
+    bool m_use_bluenoise_foveation = false;
+
+
     // Runtime data
 
     /// Frame count since scene was loaded.

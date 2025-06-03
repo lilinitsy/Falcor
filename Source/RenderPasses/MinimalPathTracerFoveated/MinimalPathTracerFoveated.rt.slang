@@ -89,6 +89,10 @@ static const bool kUseEnvBackground = USE_ENV_BACKGROUND;
 static const float3 kDefaultBackgroundColor = float3(0, 0, 0);
 static const float kRayTMax = FLT_MAX;
 
+// Foveation configurations based on defines set from the host
+static const bool k_use_guenter_foveation = USE_GUENTER_FOVEATION;
+static const bool k_use_bluenoise_foveation = USE_BLUENOISE_FOVEATION;
+
 /**
  * Payload for shadow ray.
  */
@@ -667,26 +671,40 @@ void rayGen()
 	}*/
 
     // Divide the scene into regions and trace in a guenter style
-    uint shading_rate = get_shading_rate(pixel, frameDim);
-
-	// This will only trace the top left ray instead of picking a random index inside
-    if (pixel.x % shading_rate == 0 && pixel.y % shading_rate == 0)
+    if (k_use_guenter_foveation)
     {
-		// Trace a light path
-        float3 colour = tracePath(pixel, frameDim);
+		uint shading_rate = get_shading_rate(pixel, frameDim);
 
-        // Copy that colour over to the rest of the block
-        for (uint dx = 0; dx < shading_rate; dx++)
-        {
-            for (uint dy = 0; dy < shading_rate; dy++)
-            {
-                // Ensure within bounds
-                uint2 outpixel = pixel + uint2(dx, dy);
-                if (outpixel.x < frameDim.x && outpixel.y < frameDim.y)
-                {
-                    gOutputColor[outpixel] = float4(colour, 1.0f);
+		// This will only trace the top left ray instead of picking a random index inside
+		if (pixel.x % shading_rate == 0 && pixel.y % shading_rate == 0)
+		{
+			// Trace a light path
+			float3 colour = tracePath(pixel, frameDim);
+
+			// Copy that colour over to the rest of the block
+			for (uint dx = 0; dx < shading_rate; dx++)
+			{
+				for (uint dy = 0; dy < shading_rate; dy++)
+				{
+					// Ensure within bounds
+					uint2 outpixel = pixel + uint2(dx, dy);
+					if (outpixel.x < frameDim.x && outpixel.y < frameDim.y)
+					{
+						gOutputColor[outpixel] = float4(colour, 1.0f);
+					}
 				}
 			}
 		}
+    }
+
+    else if (k_use_bluenoise_foveation)
+    {
+		// TODO
+	}
+
+	else
+	{
+		float3 colour = tracePath(pixel, frameDim);
+		gOutputColor[pixel] = float4(colour, 1.f);
 	}
 }
