@@ -177,6 +177,44 @@ ShadingData loadShadingData(const HitInfo hit, const float3 rayOrigin, const flo
 }
 
 /**
+ * Returns the shading rate given pixel position, with hardcoded values
+ *
+ * @param[in] pixel Pixel to trace a path for.
+ * @param[in] framedim Dimension of the frame in pixels.
+ * @return Returns the shading rate
+ * 
+ */
+
+uint get_shading_rate(uint2 pixel, uint2 framedim)
+{
+    float2 uv = (float2) pixel / (float2) framedim;
+    float2 center = float2(0.5f, 0.5f);
+    float uv_dist = distance(center, uv);
+    uint shading_rate = uv_dist < 0.1 ? 1 : uv_dist < 0.2 ? 2 : 4;
+
+    return shading_rate;
+}
+
+/**
+ * Returns the shading rate given pixel position, with hardcoded values
+ *
+ * @param[in] pixel Pixel to trace a path for.
+ * @param[in] framedim Dimension of the frame in pixels.
+ * @return Returns the probability we should cast a ray at this pixel
+ *
+ */
+
+float get_sample_probability(uint2 pixel, uint2 framedim)
+{
+    float2 uv = pixel / framedim;
+    float2 center = float2(0.5f, 0.5f);
+    float uv_dist = distance(center, uv);
+    float probability = uv_dist < 0.1 ? 1.0f : uv_dist < 0.2 ? 0.5f : 0.25f;
+
+    return probability;
+}
+
+/**
  * Returns the primary ray's direction.
  */
 float3 getPrimaryRayDir(uint2 launchIndex, uint2 launchDim, const Camera camera)
@@ -616,7 +654,39 @@ void rayGen()
     uint2 pixel = DispatchRaysIndex().xy;
     uint2 frameDim = DispatchRaysDimensions().xy;
 
-    float3 color = tracePath(pixel, frameDim);
+	// debug to see if we can modulate ray generation
+    /*if (pixel.x % 10 == 0)
+    {
+        float3 color = tracePath(pixel, frameDim);
+        gOutputColor[pixel] = float4(color, 1.f);
+    }
 
-    gOutputColor[pixel] = float4(color, 1.f);
+    else
+    {
+        gOutputColor[pixel] = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	}*/
+
+    // Divide the scene into regions and trace in a guenter style
+    uint shading_rate = get_shading_rate(pixel, frameDim);
+
+	// This will only trace the top left ray instead of picking a random index inside
+    if (pixel.x % shading_rate == 0 && pixel.y % shading_rate == 0)
+    {
+		// Trace a light path
+        float3 colour = tracePath(pixel, frameDim);
+
+        // Copy that colour over to the rest of the block
+        for (uint dx = 0; dx < shading_rate; dx++)
+        {
+            for (uint dy = 0; dy < shading_rate; dy++)
+            {
+                // Ensure within bounds
+                uint2 outpixel = pixel + uint2(dx, dy);
+                if (outpixel.x < frameDim.x && outpixel.y < frameDim.y)
+                {
+                    gOutputColor[outpixel] = float4(colour, 1.0f);
+				}
+			}
+		}
+	}
 }
