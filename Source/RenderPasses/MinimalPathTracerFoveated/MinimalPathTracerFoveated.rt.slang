@@ -74,6 +74,10 @@ cbuffer CB
 Texture2D<PackedHitInfo> gVBuffer;
 Texture2D<float4> gViewW; // Optional
 
+// Blue noise texture inputs - optional, but needed if USE_BLUENOISE_FOVEATION evaluates to 1. Otherwise, there may be undefined behaviour
+Texture2D<float4> bluenoise_2x2;
+Texture2D<float4> bluenoise_4x4;
+
 // Outputs
 RWTexture2D<float4> gOutputColor;
 
@@ -509,6 +513,33 @@ float3 tracePath(const uint2 pixel, const uint2 frameDim)
     return outColor;
 }
 
+void trace_guenter_foveation(uint2 pixel, uint2 frameDim)
+{
+    uint shading_rate = get_shading_rate(pixel, frameDim);
+
+    // This will only trace the top left ray instead of picking a random index inside
+    if (pixel.x % shading_rate == 0 && pixel.y % shading_rate == 0)
+    {
+        // Trace a light path
+        float3 colour = tracePath(pixel, frameDim);
+
+        // Copy that colour over to the rest of the block
+        for (uint dx = 0; dx < shading_rate; dx++)
+        {
+            for (uint dy = 0; dy < shading_rate; dy++)
+            {
+                // Ensure within bounds
+                uint2 outpixel = pixel + uint2(dx, dy);
+                if (outpixel.x < frameDim.x && outpixel.y < frameDim.y)
+                {
+                    gOutputColor[outpixel] = float4(colour, 1.0f);
+                }
+            }
+        }
+    }
+}
+
+
 //
 // Shader entry points for miss shaders.
 //
@@ -658,43 +689,10 @@ void rayGen()
     uint2 pixel = DispatchRaysIndex().xy;
     uint2 frameDim = DispatchRaysDimensions().xy;
 
-	// debug to see if we can modulate ray generation
-    /*if (pixel.x % 10 == 0)
-    {
-        float3 color = tracePath(pixel, frameDim);
-        gOutputColor[pixel] = float4(color, 1.f);
-    }
-
-    else
-    {
-        gOutputColor[pixel] = float4(0.0f, 0.0f, 0.0f, 1.0f);
-	}*/
-
     // Divide the scene into regions and trace in a guenter style
     if (k_use_guenter_foveation)
     {
-		uint shading_rate = get_shading_rate(pixel, frameDim);
-
-		// This will only trace the top left ray instead of picking a random index inside
-		if (pixel.x % shading_rate == 0 && pixel.y % shading_rate == 0)
-		{
-			// Trace a light path
-			float3 colour = tracePath(pixel, frameDim);
-
-			// Copy that colour over to the rest of the block
-			for (uint dx = 0; dx < shading_rate; dx++)
-			{
-				for (uint dy = 0; dy < shading_rate; dy++)
-				{
-					// Ensure within bounds
-					uint2 outpixel = pixel + uint2(dx, dy);
-					if (outpixel.x < frameDim.x && outpixel.y < frameDim.y)
-					{
-						gOutputColor[outpixel] = float4(colour, 1.0f);
-					}
-				}
-			}
-		}
+        trace_guenter_foveation(pixel, frameDim);
     }
 
     else if (k_use_bluenoise_foveation)

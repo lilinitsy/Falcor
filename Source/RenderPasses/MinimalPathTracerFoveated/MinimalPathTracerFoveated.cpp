@@ -45,10 +45,15 @@ namespace
 
     const char kInputViewDir[] = "viewW";
 
+    //const char k_bluenoise2x2_file[] = "../media/test_images/textures/bluenoise/2x2/0.png";
+
     const ChannelList kInputChannels = {
         // clang-format off
         { "vbuffer",        "gVBuffer",     "Visibility buffer in packed format" },
         { kInputViewDir,    "gViewW",       "World-space view direction (xyz float format)", true /* optional */ },
+        {"bluenoise_2x2",   "bluenoise_2x2", "2x2 blue noise texture", true},
+        {"bluenoise_4x4",   "bluenoise_4x4", "4x4 blue noise texture", true},
+
         // clang-format on
     };
 
@@ -70,7 +75,25 @@ MinimalPathTracerFoveated::MinimalPathTracerFoveated(ref<Device> pDevice, const 
     // Create a sample generator.
     mpSampleGenerator = SampleGenerator::create(mpDevice, SAMPLE_GENERATOR_UNIFORM);
     FALCOR_ASSERT(mpSampleGenerator);
+
+    load_sampling_textures();
 }
+
+
+void MinimalPathTracerFoveated::load_sampling_textures()
+{
+    sampling_textures.bluenoise_2x2 =
+        Texture::createFromFile(mpDevice, "../../../../media/test_images/textures/bluenoise/2x2/0.png", false, false);
+    sampling_textures.bluenoise_4x4 =
+        Texture::createFromFile(mpDevice, "../../../../media/test_images/textures/bluenoise/4x4/0.png", false, false);
+
+    if (!sampling_textures.bluenoise_2x2 || !sampling_textures.bluenoise_4x4)
+    {
+        logError("Could not load blue noise textures!");
+        logInfo("Resource path: " + getRuntimeDirectory().string());
+    }
+}
+
 
 void MinimalPathTracerFoveated::parseProperties(const Properties& props)
 {

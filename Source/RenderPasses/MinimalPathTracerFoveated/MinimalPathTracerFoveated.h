@@ -62,6 +62,8 @@ public:
     virtual bool onMouseEvent(const MouseEvent& mouseEvent) override { return false; }
     virtual bool onKeyEvent(const KeyboardEvent& keyEvent) override { return false; }
 
+    virtual void load_sampling_textures();
+
 private:
     void parseProperties(const Properties& props);
     void prepareVars();
@@ -89,6 +91,12 @@ private:
 
 
     // Runtime data
+    struct  
+    {
+        ref<Texture> bluenoise_2x2;
+        ref<Texture> bluenoise_4x4;
+    } sampling_textures;
+
 
     /// Frame count since scene was loaded.
     uint mFrameCount = 0;
