@@ -51,8 +51,8 @@ namespace
         // clang-format off
         { "vbuffer",        "gVBuffer",     "Visibility buffer in packed format" },
         { kInputViewDir,    "gViewW",       "World-space view direction (xyz float format)", true /* optional */ },
-        {"bluenoise_2x2",   "bluenoise_2x2", "2x2 blue noise texture", true},
-        {"bluenoise_4x4",   "bluenoise_4x4", "4x4 blue noise texture", true},
+        //{"bluenoise_2x2",   "bluenoise_2x2", "2x2 blue noise texture", true},
+        //{"bluenoise_4x4",   "bluenoise_4x4", "4x4 blue noise texture", true},
 
         // clang-format on
     };
@@ -92,6 +92,11 @@ void MinimalPathTracerFoveated::load_sampling_textures()
         logError("Could not load blue noise textures!");
         logInfo("Resource path: " + getRuntimeDirectory().string());
     }
+
+    /*else
+    {
+        sampling_textures.bluenoise_2x2->getDes
+    }*/
 }
 
 
@@ -189,16 +194,23 @@ void MinimalPathTracerFoveated::execute(RenderContext* pRenderContext, const Ren
     mTracer.pProgram->addDefines(getValidResourceDefines(kInputChannels, renderData));
     mTracer.pProgram->addDefines(getValidResourceDefines(kOutputChannels, renderData));
 
+
+
     // Prepare program vars. This may trigger shader compilation.
     // The program should have all necessary defines set at this point.
     if (!mTracer.pVars)
         prepareVars();
     FALCOR_ASSERT(mTracer.pVars);
 
+    
     // Set constants.
     auto var = mTracer.pVars->getRootVar();
     var["CB"]["gFrameCount"] = mFrameCount;
     var["CB"]["gPRNGDimension"] = dict.keyExists(kRenderPassPRNGDimension) ? dict[kRenderPassPRNGDimension] : 0u;
+
+    // Set up blue noise textures
+    var["bluenoise_2x2"] = sampling_textures.bluenoise_2x2;
+    var["bluenoise_4x4"] = sampling_textures.bluenoise_4x4;
 
     // Bind I/O buffers. These needs to be done per-frame as the buffers may change anytime.
     auto bind = [&](const ChannelDesc& desc)

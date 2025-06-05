@@ -697,7 +697,13 @@ void rayGen()
 
     else if (k_use_bluenoise_foveation)
     {
-		// TODO
+        // TODO
+        uint2 texdim = uint2(64, 64);
+        uint2 texcoord = pixel % texdim;
+        gOutputColor[pixel] = bluenoise_2x2.Load(int3(texcoord, 0));
+        //uint2 dims;
+		//bluenoise_2x2.GetDimensions(dims.x, dims.y);
+        //gOutputColor[pixel] = float4(dims.x, dims.y, 0.0f, 1.0f);
 	}
 
 	else
