@@ -516,71 +516,71 @@ float3 tracePath(const uint2 pixel, const uint2 frameDim)
 
 void trace_guenter_foveation(uint2 pixel, uint2 frameDim)
 {
-    uint shading_rate = get_shading_rate(pixel, frameDim);
+	uint shading_rate = get_shading_rate(pixel, frameDim);
 
-    // This will only trace the top left ray instead of picking a random index inside
-    if (pixel.x % shading_rate == 0 && pixel.y % shading_rate == 0)
-    {
-        // Trace a light path
-        float3 colour = tracePath(pixel, frameDim);
+	// This will only trace the top left ray instead of picking a random index inside
+	if (pixel.x % shading_rate == 0 && pixel.y % shading_rate == 0)
+	{
+		// Trace a light path
+		float3 colour = tracePath(pixel, frameDim);
 
-        // Copy that colour over to the rest of the block
-        for (uint dx = 0; dx < shading_rate; dx++)
-        {
-            for (uint dy = 0; dy < shading_rate; dy++)
-            {
-                // Ensure within bounds
-                uint2 outpixel = pixel + uint2(dx, dy);
-                if (outpixel.x < frameDim.x && outpixel.y < frameDim.y)
-                {
-                    gOutputColor[outpixel] = float4(colour, 1.0f);
-                }
-            }
-        }
-    }
+		// Copy that colour over to the rest of the block
+		for (uint dx = 0; dx < shading_rate; dx++)
+		{
+			for (uint dy = 0; dy < shading_rate; dy++)
+			{
+				// Ensure within bounds
+				uint2 outpixel = pixel + uint2(dx, dy);
+				if (outpixel.x < frameDim.x && outpixel.y < frameDim.y)
+				{
+					gOutputColor[outpixel] = float4(colour, 1.0f);
+				}
+			}
+		}
+	}
 }
 
 void trace_bluenoise_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord, uint2 texdim)
 {
-    uint shading_rate = get_shading_rate(pixel, frameDim);
-    if (shading_rate != 1)
-    {
-        // Assuming it's 4 or 2
-        float4 bluenoise_texture_sample = shading_rate == 4 ? bluenoise_4x4.Load(int3(texcoord, 0)) : bluenoise_2x2.Load(int3(texcoord, 0));
-        bool should_shade_this_block = bluenoise_texture_sample.r > 0.5f;
-        uint2 block_origin = pixel - (pixel % shading_rate);
+	uint shading_rate = get_shading_rate(pixel, frameDim);
+	if (shading_rate != 1)
+	{
+		// Assuming it's 4 or 2
+		float4 bluenoise_texture_sample = shading_rate == 4 ? bluenoise_4x4.Load(int3(texcoord, 0)) : bluenoise_2x2.Load(int3(texcoord, 0));
+		bool should_shade_this_block = bluenoise_texture_sample.r > 0.5f;
+		uint2 block_origin = pixel - (pixel % shading_rate);
 
-        if (should_shade_this_block)
-        {
-            float3 colour = tracePath(pixel, frameDim);
-            g_shared_colour[pixel] = float4(colour, 1.0f); // is this going to lead to mem access issues?
+		if (should_shade_this_block)
+		{
+			float3 colour = tracePath(pixel, frameDim);
+			g_shared_colour[pixel] = float4(colour, 1.0f); // is this going to lead to mem access issues?
 		}
 
 		for (uint dx = 0; dx < shading_rate; dx++)
 		{
 			for (uint dy = 0; dy < shading_rate; dy++)
 			{
-                uint2 candidate = block_origin + uint2(dx, dy);
-                if (candidate.x < frameDim.x && candidate.y < frameDim.y)
-                {
-                    uint2 candidate_texcoord = candidate % texdim;
-                    float4 candidate_sample = shading_rate == 4 ? bluenoise_4x4.Load(int3(candidate_texcoord, 0)) : bluenoise_2x2.Load(int3(candidate_texcoord, 0));
+				uint2 candidate = block_origin + uint2(dx, dy);
+				if (candidate.x < frameDim.x && candidate.y < frameDim.y)
+				{
+					uint2 candidate_texcoord = candidate % texdim;
+					float4 candidate_sample = shading_rate == 4 ? bluenoise_4x4.Load(int3(candidate_texcoord, 0)) : bluenoise_2x2.Load(int3(candidate_texcoord, 0));
 
-                    if (candidate_sample.r > 0.5f)
-                    {
-                        gOutputColor[pixel] = g_shared_colour[candidate];
-                        return;
+					if (candidate_sample.r > 0.5f)
+					{
+						gOutputColor[pixel] = g_shared_colour[candidate];
+						return;
 					}
 				}
 			}
 		}
-    }
+	}
 
-    else
-    {
+	else
+	{
 		float3 colour = tracePath(pixel, frameDim);
 		gOutputColor[pixel] = float4(colour, 1.0f);
-    }
+	}
 
 }
 
