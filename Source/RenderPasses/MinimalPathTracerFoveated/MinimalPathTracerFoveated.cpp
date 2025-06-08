@@ -45,8 +45,8 @@ namespace
 
     const char kInputViewDir[] = "viewW";
 
-    //const char k_bluenoise2x2_file[] = "../media/test_images/textures/bluenoise/2x2/0.png";
 
+    // Adding in the texture bindings here doesn't work if adding it in via pVars
     const ChannelList kInputChannels = {
         // clang-format off
         { "vbuffer",        "gVBuffer",     "Visibility buffer in packed format" },
@@ -60,6 +60,7 @@ namespace
     const ChannelList kOutputChannels = {
         // clang-format off
         { "color",          "gOutputColor", "Output color (sum of direct and indirect)", false, ResourceFormat::RGBA32Float },
+        { "shared_bluenoise_buffer", "g_shared_colour", "Shared temp RW buffer for blue noise value lookups", false, ResourceFormat::RGBA32Float },
         // clang-format on
     };
 

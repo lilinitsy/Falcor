@@ -79,6 +79,7 @@ Texture2D<float4> bluenoise_2x2;
 Texture2D<float4> bluenoise_4x4;
 
 // Outputs
+RWTexture2D<float4> g_shared_colour;
 RWTexture2D<float4> gOutputColor;
 
 // Static configuration based on defines set from the host.
@@ -539,6 +540,50 @@ void trace_guenter_foveation(uint2 pixel, uint2 frameDim)
     }
 }
 
+void trace_bluenoise_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord, uint2 texdim)
+{
+    uint shading_rate = get_shading_rate(pixel, frameDim);
+    if (shading_rate != 1)
+    {
+        // Assuming it's 4 or 2
+        float4 bluenoise_texture_sample = shading_rate == 4 ? bluenoise_4x4.Load(int3(texcoord, 0)) : bluenoise_2x2.Load(int3(texcoord, 0));
+        bool should_shade_this_block = bluenoise_texture_sample.r > 0.5f;
+        uint2 block_origin = pixel - (pixel % shading_rate);
+
+        if (should_shade_this_block)
+        {
+            float3 colour = tracePath(pixel, frameDim);
+            g_shared_colour[pixel] = float4(colour, 1.0f); // is this going to lead to mem access issues?
+		}
+
+		for (uint dx = 0; dx < shading_rate; dx++)
+		{
+			for (uint dy = 0; dy < shading_rate; dy++)
+			{
+                uint2 candidate = block_origin + uint2(dx, dy);
+                if (candidate.x < frameDim.x && candidate.y < frameDim.y)
+                {
+                    uint2 candidate_texcoord = candidate % texdim;
+                    float4 candidate_sample = shading_rate == 4 ? bluenoise_4x4.Load(int3(candidate_texcoord, 0)) : bluenoise_2x2.Load(int3(candidate_texcoord, 0));
+
+                    if (candidate_sample.r > 0.5f)
+                    {
+                        gOutputColor[pixel] = g_shared_colour[candidate];
+                        return;
+					}
+				}
+			}
+		}
+    }
+
+    else
+    {
+		float3 colour = tracePath(pixel, frameDim);
+		gOutputColor[pixel] = float4(colour, 1.0f);
+    }
+
+}
+
 
 //
 // Shader entry points for miss shaders.
@@ -700,7 +745,8 @@ void rayGen()
         // TODO
         uint2 texdim = uint2(64, 64);
         uint2 texcoord = pixel % texdim;
-        gOutputColor[pixel] = bluenoise_2x2.Load(int3(texcoord, 0));
+        trace_bluenoise_from_textures(pixel, frameDim, texcoord, texdim);
+        //gOutputColor[pixel] = bluenoise_2x2.Load(int3(texcoord, 0));
         //uint2 dims;
 		//bluenoise_2x2.GetDimensions(dims.x, dims.y);
         //gOutputColor[pixel] = float4(dims.x, dims.y, 0.0f, 1.0f);
