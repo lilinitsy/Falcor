@@ -88,11 +88,25 @@ void MinimalPathTracerFoveated::load_sampling_textures()
     sampling_textures.bluenoise_4x4 =
         Texture::createFromFile(mpDevice, "../../../../media/test_images/textures/bluenoise/4x4/0.png", false, false);
 
+    sampling_textures.poissondisc_2x2 =
+        Texture::createFromFile(mpDevice, "../../../../media/test_images/textures/bluenoise/2x2/poisson_0.png", false, false);
+    sampling_textures.poissondisc_4x4 =
+        Texture::createFromFile(mpDevice, "../../../../media/test_images/textures/bluenoise/4x4/poisson_0.png", false, false);
+
+
+
     if (!sampling_textures.bluenoise_2x2 || !sampling_textures.bluenoise_4x4)
     {
         logError("Could not load blue noise textures!");
         logInfo("Resource path: " + getRuntimeDirectory().string());
     }
+
+    if (!sampling_textures.poissondisc_2x2 || !sampling_textures.poissondisc_4x4)
+    {
+        logError("Could not load poisson disc textures!");
+        logInfo("Resource path: " + getRuntimeDirectory().string());
+    }
+
 
     /*else
     {
@@ -188,7 +202,8 @@ void MinimalPathTracerFoveated::execute(RenderContext* pRenderContext, const Ren
     mTracer.pProgram->addDefine("USE_ENV_LIGHT", mpScene->useEnvLight() ? "1" : "0");
     mTracer.pProgram->addDefine("USE_ENV_BACKGROUND", mpScene->useEnvBackground() ? "1" : "0");
     mTracer.pProgram->addDefine("USE_GUENTER_FOVEATION", m_use_guenter_foveation ? "1" : "0");
-    mTracer.pProgram->addDefine("USE_BLUENOISE_FOVEATION", m_use_bluenoise_foveation ? "1" : "0");
+    mTracer.pProgram->addDefine("USE_BLUENOISE_FOVEATION_FILTERED", m_use_bluenoise_foveation_filtered ? "1" : "0");
+    mTracer.pProgram->addDefine("USE_POISSONDISC_FOVEATION", m_use_poissondisc_foveation ? "1" : "0");
 
     // For optional I/O resources, set 'is_valid_<name>' defines to inform the program of which ones it can access.
     // TODO: This should be moved to a more general mechanism using Slang.
@@ -212,6 +227,9 @@ void MinimalPathTracerFoveated::execute(RenderContext* pRenderContext, const Ren
     // Set up blue noise textures
     var["bluenoise_2x2"] = sampling_textures.bluenoise_2x2;
     var["bluenoise_4x4"] = sampling_textures.bluenoise_4x4;
+
+    var["poissondisc_2x2"] = sampling_textures.poissondisc_2x2;
+    var["poissondisc_4x4"] = sampling_textures.poissondisc_4x4;
 
     // Bind I/O buffers. These needs to be done per-frame as the buffers may change anytime.
     auto bind = [&](const ChannelDesc& desc)
@@ -252,8 +270,11 @@ void MinimalPathTracerFoveated::renderUI(Gui::Widgets& widget)
     dirty |= widget.checkbox("use guenter foveation", m_use_guenter_foveation);
     widget.tooltip("Whether to use guenter style shading rate ray density reductions.", true);
 
-    dirty |= widget.checkbox("use blue noise foveation", m_use_bluenoise_foveation);
+    dirty |= widget.checkbox("use blue noise foveation", m_use_bluenoise_foveation_filtered);
     widget.tooltip("Whether to use blue noise style shading rate ray density reductions.", true);
+
+    dirty |= widget.checkbox("use poisson disc foveation", m_use_poissondisc_foveation);
+    widget.tooltip("Whether to use poisson disc textures to perform shading rate ray density reductions.", true);
 
     // If rendering options that modify the output have changed, set flag to indicate that.
     // In execute() we will pass the flag to other passes for reset of temporal data etc.

@@ -74,9 +74,12 @@ cbuffer CB
 Texture2D<PackedHitInfo> gVBuffer;
 Texture2D<float4> gViewW; // Optional
 
-// Blue noise texture inputs - optional, but needed if USE_BLUENOISE_FOVEATION evaluates to 1. Otherwise, there may be undefined behaviour
+// Blue noise texture inputs - optional, but needed if USE_BLUENOISE_FOVEATION_FILTERED evaluates to 1. Otherwise, there may be undefined behaviour
 Texture2D<float4> bluenoise_2x2;
 Texture2D<float4> bluenoise_4x4;
+
+Texture2D<float4> poissondisc_2x2;
+Texture2D<float4> poissondisc_4x4;
 
 // Outputs
 RWTexture2D<float4> g_shared_colour;
@@ -96,7 +99,8 @@ static const float kRayTMax = FLT_MAX;
 
 // Foveation configurations based on defines set from the host
 static const bool k_use_guenter_foveation = USE_GUENTER_FOVEATION;
-static const bool k_use_bluenoise_foveation = USE_BLUENOISE_FOVEATION;
+static const bool k_use_bluenoise_foveation_filtered = USE_BLUENOISE_FOVEATION_FILTERED;
+static const bool k_use_poissondisc_foveation = USE_POISSONDISC_FOVEATION;
 
 /**
  * Payload for shadow ray.
@@ -581,7 +585,35 @@ void trace_bluenoise_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord, 
 		float3 colour = tracePath(pixel, frameDim);
 		gOutputColor[pixel] = float4(colour, 1.0f);
 	}
+}
 
+void trace_poissondisc_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord, uint2 texdim)
+{
+	uint shading_rate = get_shading_rate(pixel, frameDim);
+	if (shading_rate != 1)
+	{
+		float4 bluenoise_texture_sample = shading_rate == 4 ? poissondisc_4x4.Load(int3(texcoord, 0)) : poissondisc_2x2.Load(int3(texcoord, 0));
+		bool should_shade_this_block = bluenoise_texture_sample.r > 0.5f;
+		uint2 block_origin = pixel - (pixel % shading_rate);
+
+		if (should_shade_this_block)
+		{
+			float3 colour = tracePath(pixel, frameDim);
+			// g_shared_colour[pixel] = float4(colour, 1.0f); // is this going to lead to mem access issues?
+			gOutputColor[pixel] = float4(colour, 1.0f);
+		}
+
+		else
+		{
+			gOutputColor[pixel] = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		}
+	}
+
+	else
+	{
+		float3 colour = tracePath(pixel, frameDim);
+		gOutputColor[pixel] = float4(colour, 1.0f);
+	}
 }
 
 
@@ -740,7 +772,7 @@ void rayGen()
         trace_guenter_foveation(pixel, frameDim);
     }
 
-    else if (k_use_bluenoise_foveation)
+    else if (k_use_bluenoise_foveation_filtered)
     {
         // TODO
         uint2 texdim = uint2(64, 64);
@@ -750,6 +782,13 @@ void rayGen()
         //uint2 dims;
 		//bluenoise_2x2.GetDimensions(dims.x, dims.y);
         //gOutputColor[pixel] = float4(dims.x, dims.y, 0.0f, 1.0f);
+	}
+
+	else if (k_use_poissondisc_foveation)
+	{
+		uint2 texdim = uint2(64, 64);
+		uint2 texcoord = pixel % texdim;
+		trace_poissondisc_from_textures(pixel, frameDim, texcoord, texdim);
 	}
 
 	else

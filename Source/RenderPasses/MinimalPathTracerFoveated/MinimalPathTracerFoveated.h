@@ -86,8 +86,10 @@ private:
 
     /// Use Guenter foveation
     bool m_use_guenter_foveation = false;
-    /// Use blue noise foveation
-    bool m_use_bluenoise_foveation = false;
+    /// Use blue noise foveation filtered from void and cluster gradient
+    bool m_use_bluenoise_foveation_filtered = false;
+    /// Use the poisson disc sampling textured
+    bool m_use_poissondisc_foveation = false;
 
 
     // Runtime data
@@ -95,6 +97,10 @@ private:
     {
         ref<Texture> bluenoise_2x2;
         ref<Texture> bluenoise_4x4;
+
+        ref<Texture> poissondisc_2x2;
+        ref<Texture> poissondisc_4x4;
+
     } sampling_textures;
 
 
