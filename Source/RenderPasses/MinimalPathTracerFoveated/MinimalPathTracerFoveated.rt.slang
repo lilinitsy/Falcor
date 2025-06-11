@@ -590,29 +590,78 @@ void trace_bluenoise_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord, 
 void trace_poissondisc_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord, uint2 texdim)
 {
 	uint shading_rate = get_shading_rate(pixel, frameDim);
+	bool did_shade = false;
 	if (shading_rate != 1)
 	{
 		float4 bluenoise_texture_sample = shading_rate == 4 ? poissondisc_4x4.Load(int3(texcoord, 0)) : poissondisc_2x2.Load(int3(texcoord, 0));
 		bool should_shade_this_block = bluenoise_texture_sample.r > 0.5f;
 		uint2 block_origin = pixel - (pixel % shading_rate);
 
-		if (should_shade_this_block)
+		// trace the marked samples, which are pure white, so b will be 1.0
+		if (bluenoise_texture_sample.b > 0.5f)
 		{
 			float3 colour = tracePath(pixel, frameDim);
-			// g_shared_colour[pixel] = float4(colour, 1.0f); // is this going to lead to mem access issues?
-			gOutputColor[pixel] = float4(colour, 1.0f);
+			g_shared_colour[pixel] = float4(colour, 1.0f);
+			//gOutputColor[pixel] = g_shared_colour[pixel];
+			did_shade = true;
+		}
+
+		/*if (should_shade_this_block)
+		{
+			float3 colour = tracePath(pixel, frameDim);
+			g_shared_colour[pixel] = float4(colour, 1.0f); // is this going to lead to mem access issues?
+			//gOutputColor[pixel] = float4(colour, 1.0f);
 		}
 
 		else
 		{
 			gOutputColor[pixel] = float4(0.0f, 0.0f, 0.0f, 1.0f);
-		}
+		}*/
 	}
 
 	else
 	{
 		float3 colour = tracePath(pixel, frameDim);
-		gOutputColor[pixel] = float4(colour, 1.0f);
+		g_shared_colour[pixel] = float4(colour, 1.0f);
+		did_shade = true;
+	}
+
+	// Look for closest neighbour
+	if(!did_shade)
+	{
+		float mindist = frameDim.x * frameDim.y;
+		int search_radius = (shading_rate / 2) + 1;
+		float4 best_colour = float4(0.0f, 0.0f, 0.0f, 1.0f);
+
+		for(int dx = -search_radius; dx <= search_radius; dx++)
+		{
+			for(int dy = -search_radius; dy <= search_radius; dy++)
+			{
+				int2 neighbour = int2(pixel) + int2(dx, dy);
+				if (neighbour.x < 0 || neighbour.y < 0 || neighbour.x >= frameDim.x || neighbour.y >= frameDim.y)
+				{
+					continue;
+				}
+
+				float4 candidate = g_shared_colour[neighbour];
+				if(candidate.a > 0.9)
+				{
+					float dist = dot(float2(dx, dy), float2(dx, dy));
+					if(dist < mindist)
+					{
+						mindist = dist;
+						best_colour = candidate;
+					}
+				}
+			}
+		}
+
+		gOutputColor[pixel] = best_colour;
+	}
+
+	else
+    {
+		gOutputColor[pixel] = g_shared_colour[pixel];
 	}
 }
 
