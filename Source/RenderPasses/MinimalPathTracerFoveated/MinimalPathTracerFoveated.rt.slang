@@ -570,7 +570,7 @@ void trace_bluenoise_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord, 
 					uint2 candidate_texcoord = candidate % texdim;
 					float4 candidate_sample = shading_rate == 4 ? bluenoise_4x4.Load(int3(candidate_texcoord, 0)) : bluenoise_2x2.Load(int3(candidate_texcoord, 0));
 
-					if (candidate_sample.r > 0.5f)
+					if (candidate_sample.r > 0.9f)
 					{
 						gOutputColor[pixel] = g_shared_colour[candidate];
 						return;
@@ -602,21 +602,8 @@ void trace_poissondisc_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord
 		{
 			float3 colour = tracePath(pixel, frameDim);
 			g_shared_colour[pixel] = float4(colour, 1.0f);
-			//gOutputColor[pixel] = g_shared_colour[pixel];
 			did_shade = true;
 		}
-
-		/*if (should_shade_this_block)
-		{
-			float3 colour = tracePath(pixel, frameDim);
-			g_shared_colour[pixel] = float4(colour, 1.0f); // is this going to lead to mem access issues?
-			//gOutputColor[pixel] = float4(colour, 1.0f);
-		}
-
-		else
-		{
-			gOutputColor[pixel] = float4(0.0f, 0.0f, 0.0f, 1.0f);
-		}*/
 	}
 
 	else
@@ -631,7 +618,7 @@ void trace_poissondisc_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord
 	{
 		float mindist = frameDim.x * frameDim.y;
 		int search_radius = (shading_rate / 2) + 1;
-		float4 best_colour = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		float4 best_colour = float4(0.0f, 0.0f, 0.0f, 0.0f);
 
 		for(int dx = -search_radius; dx <= search_radius; dx++)
 		{
@@ -644,7 +631,7 @@ void trace_poissondisc_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord
 				}
 
 				float4 candidate = g_shared_colour[neighbour];
-				if(candidate.a > 0.9)
+				if(candidate.a > 0.9f)
 				{
 					float dist = dot(float2(dx, dy), float2(dx, dy));
 					if(dist < mindist)
