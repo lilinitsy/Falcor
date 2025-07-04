@@ -935,12 +935,6 @@ struct PathTracerFoveated
             return;
         }
 
-		if(isPrimaryHit && ecc > 15)
-		{
-			path.L = float3(1.0f, 1.0f, 1.0f);
-			path.terminate();
-			return;
-		}
 
         // Compute origin for rays traced from this path vertex.
         if (isCurveHit)
@@ -1079,6 +1073,16 @@ struct PathTracerFoveated
         {
             path.terminate();
         }
+
+
+		if(isPrimaryHit && ecc > 15)
+		{
+			// This line below forces the path colour to white
+			//path.L = float3(1.0f, 1.0f, 1.0f);
+			path.terminate();
+			return;
+		}
+
     }
 
     /** Handle the case when a scatter ray misses the scene.
