@@ -601,7 +601,7 @@ void trace_poissondisc_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord
 		if (bluenoise_texture_sample.b > 0.5f)
 		{
 			float3 colour = tracePath(pixel, frameDim);
-			g_shared_colour[pixel] = float4(colour, 1.0f);
+			gOutputColor[pixel] = float4(colour, 1.0f);
 			did_shade = true;
 		}
 	}
@@ -609,10 +609,16 @@ void trace_poissondisc_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord
 	else
 	{
 		float3 colour = tracePath(pixel, frameDim);
-		g_shared_colour[pixel] = float4(colour, 1.0f);
+		gOutputColor[pixel] = float4(colour, 1.0f);
 		did_shade = true;
 	}
 
+	if(!did_shade)
+	{
+		gOutputColor[pixel] = float4(0.0f, 0.0f, 0.0f, 1.0f);
+	}
+
+	/*
 	// Look for closest neighbour
 	if(!did_shade)
 	{
@@ -649,7 +655,7 @@ void trace_poissondisc_from_textures(uint2 pixel, uint2 frameDim, uint2 texcoord
 	else
     {
 		gOutputColor[pixel] = g_shared_colour[pixel];
-	}
+	}*/
 }
 
 
