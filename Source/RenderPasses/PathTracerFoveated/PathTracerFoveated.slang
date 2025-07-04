@@ -1075,13 +1075,23 @@ struct PathTracerFoveated
         }
 
 
+		// Terminate specular passes?
+		//if(path.getBounces(BounceType::Specular) > 0 && path.isSpecular())
+		if(ecc > 15 && path.isSpecular())// || path.isSpecularPrimaryHit())
+		{
+			path.L = float3(1.0f, 0.0f, 0.0f);
+			path.terminate();
+			return;
+		}
+
+		/*
 		if(isPrimaryHit && ecc > 15)
 		{
 			// This line below forces the path colour to white
 			//path.L = float3(1.0f, 1.0f, 1.0f);
 			path.terminate();
 			return;
-		}
+		}*/
 
     }
 
